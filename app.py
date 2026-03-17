@@ -4,7 +4,7 @@ import streamlit as st
 from io import BytesIO
 
 # =========================================================
-# PAGE CONFIG
+# CONFIGURATION DE LA PAGE
 # =========================================================
 st.set_page_config(
     page_title="CarbonRepair Advisor",
@@ -13,13 +13,13 @@ st.set_page_config(
 )
 
 # =========================================================
-# FILE PATHS
+# CHEMINS DES FICHIERS
 # =========================================================
 CARBON_FILE = "carbon_data.html"
 COMPANIES_FILE = "entreprises.xlsx"
 
 # =========================================================
-# BUSINESS PARAMETERS
+# PARAMÈTRES MÉTIER
 # =========================================================
 REPL_MAP = {
     r"\'ea": "ê",
@@ -76,7 +76,7 @@ if "basket" not in st.session_state:
     st.session_state.basket = []
 
 # =========================================================
-# HELPERS
+# FONCTIONS UTILITAIRES
 # =========================================================
 def normalize_text(value: str) -> str:
     if pd.isna(value):
@@ -111,13 +111,13 @@ def to_excel_bytes(df: pd.DataFrame) -> bytes:
     return output.getvalue()
 
 # =========================================================
-# DATA LOADING
+# CHARGEMENT DES DONNÉES
 # =========================================================
 @st.cache_data
 def load_carbon_df(html_path: str) -> pd.DataFrame:
     tables = pd.read_html(html_path)
     if not tables:
-        raise ValueError("No table found in carbon_data.html")
+        raise ValueError("Aucun tableau trouvé dans carbon_data.html")
 
     df = tables[0].copy()
 
@@ -154,7 +154,7 @@ def load_companies_df(file_path: str) -> pd.DataFrame:
     elif file_path.endswith(".csv"):
         df = pd.read_csv(file_path, encoding="utf-8")
     else:
-        raise ValueError("Unsupported companies file format.")
+        raise ValueError("Format du fichier entreprises non supporté.")
 
     df.columns = df.columns.astype(str).str.strip()
 
@@ -185,7 +185,7 @@ def load_companies_df(file_path: str) -> pd.DataFrame:
     required_basic = ["Entreprise", "Categorie_outil"]
     for col in required_basic:
         if col not in df.columns:
-            raise ValueError(f"Missing required column in companies file: {col}")
+            raise ValueError(f"Colonne obligatoire absente dans le fichier entreprises : {col}")
 
     df["Categorie_outil_liste"] = df["Categorie_outil"].apply(split_categories)
 
@@ -264,7 +264,7 @@ def filter_companies_by_category(companies_df: pd.DataFrame, selected_category: 
     return result[cols].reset_index(drop=True)
 
 # =========================================================
-# LOAD DATA
+# CHARGEMENT
 # =========================================================
 carbon_df = load_carbon_df(CARBON_FILE)
 companies_df = load_companies_df(COMPANIES_FILE)
@@ -309,61 +309,63 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =========================================================
-# HEADER
+# EN-TÊTE
 # =========================================================
 st.markdown("""
 <div class="header-card">
     <h2 style="margin:0;">CarbonRepair Advisor</h2>
     <p style="margin:10px 0 0 0; line-height:1.5;">
-        Welcome to this low-carbon claim repair estimation tool.
-        It helps users select a repair solution, compare a standard option with a low-carbon alternative,
-        estimate related CO₂ emissions, and identify companies linked to the selected category.
+        Bienvenue dans cet outil d’aide au chiffrage sinistre bas carbone.
+        Il permet de sélectionner une solution de réparation, de comparer une option standard
+        avec une alternative bas carbone, d’estimer les émissions de CO₂ associées
+        et d’identifier les entreprises liées à la catégorie sélectionnée.
     </p>
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("""
 <div class="info-card">
-    <b>User path</b><br>
-    The tool is structured in four steps: damaged item selection, emissions estimation and solution comparison,
-    related company identification, and final estimate summary.
+    <b>Parcours utilisateur</b><br>
+    L’outil est structuré en quatre étapes : sélection du poste sinistré, estimation des émissions et comparaison des solutions,
+    identification des entreprises liées à la catégorie choisie, puis récapitulatif du chiffrage.
 </div>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# STEP 1
+# ÉTAPE 1
 # =========================================================
-st.markdown("<h3 class='section-title'>Step 1 — Damaged item selection</h3>", unsafe_allow_html=True)
+st.markdown("<h3 class='section-title'>Étape 1 — Sélection du poste sinistré</h3>", unsafe_allow_html=True)
 st.markdown("""
-In this first step, you define the damaged item by selecting the category,
-technical detail level, and related service. This guides the tool toward the most relevant solutions.
+Dans cette première étape, vous définissez le poste sinistré en sélectionnant la catégorie,
+le niveau de détail technique et la prestation concernée.
+Cette sélection permet d’orienter l’outil vers les solutions les plus pertinentes.
 """)
 
 categories = sorted(carbon_df["Categorie"].dropna().unique().tolist())
-selected_category = st.selectbox("Category", categories)
+selected_category = st.selectbox("Catégorie", categories)
 
 d1 = carbon_df[carbon_df["Categorie"] == selected_category].copy()
 
 selector_options = sorted([x for x in d1["Selector"].dropna().unique().tolist() if x != ""])
 if selector_options:
-    selected_selector = st.selectbox("Selector", selector_options)
+    selected_selector = st.selectbox("Sélecteur", selector_options)
     d2 = d1[d1["Selector"] == selected_selector].copy()
 else:
     selected_selector = ""
     d2 = d1.copy()
 
 sous_cat_options = sorted(d2["Sous_categorie"].dropna().unique().tolist())
-selected_sous_cat = st.selectbox("Sub-category", sous_cat_options)
+selected_sous_cat = st.selectbox("Sous-catégorie", sous_cat_options)
 
 d3 = d2[d2["Sous_categorie"] == selected_sous_cat].copy()
 
 type_prest_options = sorted(d3["Type_prestation"].dropna().unique().tolist())
-selected_type_prest = st.selectbox("Service type", type_prest_options)
+selected_type_prest = st.selectbox("Type de prestation", type_prest_options)
 
 d4 = d3[d3["Type_prestation"] == selected_type_prest].copy()
 
 prest_options = sorted(d4["Prestation"].dropna().unique().tolist())
-selected_prest = st.selectbox("Service", prest_options)
+selected_prest = st.selectbox("Prestation", prest_options)
 
 d5 = d4[d4["Prestation"] == selected_prest].copy()
 
@@ -383,7 +385,7 @@ qty = 0.0
 selected_family = None
 
 if available_families:
-    selected_family = st.radio("Option type", available_families, horizontal=True)
+    selected_family = st.radio("Type d’option", available_families, horizontal=True)
 
     active_df = current_candidates[
         current_candidates["Option_famille"] == selected_family
@@ -395,22 +397,23 @@ if available_families:
         axis=1
     )
 
-    selected_label = st.selectbox("Product / process", active_df["label"].tolist())
+    selected_label = st.selectbox("Produit / process", active_df["label"].tolist())
     current_selected_row = active_df[active_df["label"] == selected_label].iloc[0]
 
-    qty = st.number_input("Quantity", min_value=0.0, value=1.0, step=1.0)
+    qty = st.number_input("Quantité", min_value=0.0, value=1.0, step=1.0)
 else:
-    st.warning("No available option for the selected filters.")
+    st.warning("Aucune option disponible pour les filtres sélectionnés.")
 
 # =========================================================
-# STEP 2
+# ÉTAPE 2
 # =========================================================
 st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown("<h3 class='section-title'>Step 2 — Emissions estimation and solution comparison</h3>", unsafe_allow_html=True)
+st.markdown("<h3 class='section-title'>Étape 2 — Estimation des émissions et comparaison des solutions</h3>", unsafe_allow_html=True)
 st.markdown("""
-Once the solution is selected, the tool estimates the CO₂ emissions linked to the entered quantity.
-It first shows standard solutions, then low-carbon alternatives. An impact comparator also highlights
-the carbon gain potential and formulates a recommendation.
+Une fois la solution choisie, l’outil estime les émissions de CO₂ associées à la quantité renseignée.
+Il affiche d’abord les solutions standard, puis les alternatives bas carbone.
+Un comparateur d’impact met également en évidence le gain carbone potentiel
+et formule une recommandation.
 """)
 
 emissions_per_unit = None
@@ -427,7 +430,7 @@ if current_selected_row is not None:
         st.markdown(f"""
         <div class="card">
             <div style="font-size:15px; font-weight:600; color:#1f4e79; margin-bottom:8px;">
-                Specific emissions
+                Émissions spécifiques
             </div>
             <div style="font-size:18px;">
                 {emissions_per_unit:.2f} kg CO₂ / {unit}
@@ -439,7 +442,7 @@ if current_selected_row is not None:
         st.markdown(f"""
         <div class="card">
             <div style="font-size:15px; font-weight:600; color:#1f4e79; margin-bottom:8px;">
-                Total emissions
+                Émissions totales
             </div>
             <div style="font-size:18px;">
                 {emissions_total:.2f} kg CO₂
@@ -447,10 +450,11 @@ if current_selected_row is not None:
         </div>
         """, unsafe_allow_html=True)
 
-st.markdown("#### Impact comparator")
+st.markdown("#### Comparateur d’impact")
 st.markdown("""
-When both standard and low-carbon solutions exist for the same item,
-the tool automatically compares their impacts to highlight the carbon gain potential and support decision-making.
+Lorsque des solutions standard et bas carbone existent pour un même poste,
+l’outil compare automatiquement leurs impacts afin de mettre en évidence
+le gain carbone potentiel et d’aider à la prise de décision.
 """)
 
 if not standard_df.empty and not low_carbon_df.empty:
@@ -463,36 +467,36 @@ if not standard_df.empty and not low_carbon_df.empty:
     reduction_pct = (gain_absolute / standard_total * 100) if standard_total > 0 else 0.0
 
     if gain_absolute > 0:
-        recommendation = "Prefer the low-carbon alternative."
+        recommendation = "Privilégier l’alternative bas carbone."
         recommendation_color = "#2e7d32"
     elif gain_absolute < 0:
-        recommendation = "The standard solution has a lower carbon impact here."
+        recommendation = "La solution standard présente ici un impact carbone inférieur."
         recommendation_color = "#c62828"
     else:
-        recommendation = "Both solutions have an equivalent impact based on available data."
+        recommendation = "Les deux solutions présentent un impact équivalent selon les données disponibles."
         recommendation_color = "#7f6000"
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Standard emissions", f"{standard_total:.2f} kg CO₂")
-    c2.metric("Low-carbon emissions", f"{low_carbon_total:.2f} kg CO₂")
-    c3.metric("Absolute carbon gain", f"{gain_absolute:.2f} kg CO₂")
-    c4.metric("Reduction", f"{reduction_pct:.1f} %")
+    c1.metric("Émissions standard", f"{standard_total:.2f} kg CO₂")
+    c2.metric("Émissions bas carbone", f"{low_carbon_total:.2f} kg CO₂")
+    c3.metric("Gain carbone absolu", f"{gain_absolute:.2f} kg CO₂")
+    c4.metric("Réduction", f"{reduction_pct:.1f} %")
 
     st.markdown(f"""
     <div class="card" style="border-left:5px solid {recommendation_color};">
-        <b>Recommendation:</b> <span style="color:{recommendation_color};">{recommendation}</span><br><br>
-        <b>Standard reference:</b> {best_standard['Produit_process']}<br>
-        <b>Low-carbon alternative:</b> {best_low_carbon['Produit_process']}
+        <b>Recommandation :</b> <span style="color:{recommendation_color};">{recommendation}</span><br><br>
+        <b>Référence standard :</b> {best_standard['Produit_process']}<br>
+        <b>Alternative bas carbone :</b> {best_low_carbon['Produit_process']}
     </div>
     """, unsafe_allow_html=True)
 else:
-    st.info("Impact comparison unavailable: at least one standard and one low-carbon solution are required.")
+    st.info("Comparaison d’impact indisponible : au moins une solution standard et une solution bas carbone sont nécessaires.")
 
-# Buttons
+# Boutons
 b1, b2, b3 = st.columns(3)
 
 with b1:
-    if st.button("Add to estimate", use_container_width=True):
+    if st.button("Ajouter au chiffrage", use_container_width=True):
         if current_selected_row is not None and emissions_per_unit is not None and emissions_total is not None:
             st.session_state.basket.append(
                 {
@@ -509,41 +513,42 @@ with b1:
                     "kg_CO2_total": float(emissions_total),
                 }
             )
-            st.success("Line added to estimate.")
+            st.success("Ligne ajoutée au chiffrage.")
 
 with b2:
-    if st.button("Remove last line", use_container_width=True):
+    if st.button("Retirer la dernière ligne", use_container_width=True):
         if st.session_state.basket:
             st.session_state.basket.pop()
-            st.success("Last line removed.")
+            st.success("Dernière ligne retirée.")
 
 with b3:
-    if st.button("Clear estimate", use_container_width=True):
+    if st.button("Vider le chiffrage", use_container_width=True):
         st.session_state.basket = []
-        st.success("Estimate cleared.")
+        st.success("Chiffrage vidé.")
 
-st.markdown("#### Available solution comparison")
+st.markdown("#### Comparaison des solutions disponibles")
 
-st.markdown("##### Standard solutions")
+st.markdown("##### Solutions standard")
 if standard_df.empty:
-    st.write("No standard solution found.")
+    st.write("Aucune solution standard trouvée.")
 else:
     st.dataframe(make_option_table(standard_df), use_container_width=True)
 
-st.markdown("##### Low-carbon solutions")
+st.markdown("##### Solutions bas carbone")
 if low_carbon_df.empty:
-    st.write("No low-carbon solution found.")
+    st.write("Aucune solution bas carbone trouvée.")
 else:
     st.dataframe(make_option_table(low_carbon_df), use_container_width=True)
 
 # =========================================================
-# STEP 3
+# ÉTAPE 3
 # =========================================================
 st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown("<h3 class='section-title'>Step 3 — Companies linked to the selected category</h3>", unsafe_allow_html=True)
+st.markdown("<h3 class='section-title'>Étape 3 — Entreprises liées à la catégorie sélectionnée</h3>", unsafe_allow_html=True)
 st.markdown("""
-This step presents the companies linked to the selected category. It helps quickly identify relevant actors,
-their specificities, coverage area, headquarters, and main information.
+Cette étape présente les entreprises liées à la catégorie sélectionnée.
+Elle permet d’identifier rapidement des acteurs pertinents, leurs spécificités,
+leur zone de couverture, leur siège social et leurs informations principales.
 """)
 
 company_result = filter_companies_by_category(companies_df, selected_category)
@@ -551,30 +556,31 @@ company_result = filter_companies_by_category(companies_df, selected_category)
 st.markdown(f"""
 <div class="card">
     <div style="font-size:15px; font-weight:600; color:#1f4e79; margin-bottom:8px;">
-        Matching information
+        Informations de correspondance
     </div>
-    <div><b>Selected category:</b> {selected_category}</div>
-    <div><b>Identified companies:</b> {len(company_result)}</div>
+    <div><b>Catégorie sélectionnée :</b> {selected_category}</div>
+    <div><b>Entreprises identifiées :</b> {len(company_result)}</div>
 </div>
 """, unsafe_allow_html=True)
 
 if company_result.empty:
-    st.write("No company found for this category.")
+    st.write("Aucune entreprise trouvée pour cette catégorie.")
 else:
     st.dataframe(company_result, use_container_width=True)
 
 # =========================================================
-# STEP 4
+# ÉTAPE 4
 # =========================================================
 st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown("<h3 class='section-title'>Step 4 — Estimate summary</h3>", unsafe_allow_html=True)
+st.markdown("<h3 class='section-title'>Étape 4 — Récapitulatif du chiffrage</h3>", unsafe_allow_html=True)
 st.markdown("""
-The estimate summary gathers all added lines, selected quantities, emissions associated with each line,
-and the total estimated CO₂.
+Le récapitulatif du chiffrage rassemble toutes les lignes ajoutées,
+les quantités sélectionnées, les émissions associées à chaque ligne
+et le total global estimé en CO₂.
 """)
 
 if not st.session_state.basket:
-    st.write("No line added yet.")
+    st.write("Aucune ligne ajoutée pour le moment.")
 else:
     basket_df = pd.DataFrame(st.session_state.basket)
 
@@ -585,40 +591,40 @@ else:
 
     basket_display = basket_display.rename(
         columns={
-            "Selector": "Selector",
-            "Sous_categorie": "Sub-category",
-            "Type_prestation": "Service type",
-            "Option_famille": "Option type",
-            "Produit_process": "Product / process",
-            "Unite": "Unit",
-            "Quantite": "Quantity",
-            "Emissions_specifiques": "Specific emissions (kg CO₂ / unit)",
-            "kg_CO2_total": "Total kg CO₂",
+            "Selector": "Sélecteur",
+            "Sous_categorie": "Sous-catégorie",
+            "Type_prestation": "Type de prestation",
+            "Option_famille": "Type d’option",
+            "Produit_process": "Produit / process",
+            "Unite": "Unité",
+            "Quantite": "Quantité",
+            "Emissions_specifiques": "Émissions spécifiques (kg CO₂ / unité)",
+            "kg_CO2_total": "kg CO₂ total",
         }
     )
 
     display_cols = [
         "Categorie",
-        "Selector",
-        "Sub-category",
-        "Service type",
+        "Sélecteur",
+        "Sous-catégorie",
+        "Type de prestation",
         "Prestation",
-        "Option type",
-        "Product / process",
-        "Unit",
-        "Quantity",
-        "Specific emissions (kg CO₂ / unit)",
-        "Total kg CO₂",
+        "Type d’option",
+        "Produit / process",
+        "Unité",
+        "Quantité",
+        "Émissions spécifiques (kg CO₂ / unité)",
+        "kg CO₂ total",
     ]
 
     st.dataframe(basket_display[display_cols], use_container_width=True)
 
     total = float(basket_df["kg_CO2_total"].sum())
-    st.markdown(f"**Total estimated emissions:** {total:.2f} kg CO₂")
+    st.markdown(f"**Total global estimé :** {total:.2f} kg CO₂")
 
     csv_data = basket_df.to_csv(index=False).encode("utf-8-sig")
     st.download_button(
-        label="Download estimate as CSV",
+        label="Télécharger le chiffrage en CSV",
         data=csv_data,
         file_name="chiffrage_sinistre.csv",
         mime="text/csv",
@@ -626,7 +632,7 @@ else:
 
     excel_bytes = to_excel_bytes(basket_df)
     st.download_button(
-        label="Download estimate as Excel",
+        label="Télécharger le chiffrage en Excel",
         data=excel_bytes,
         file_name="chiffrage_sinistre.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
